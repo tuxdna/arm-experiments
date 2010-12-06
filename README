@@ -1,0 +1,23 @@
+This codebase contains some example code which can be used to experiment with
+QEMU/ARM.
+
+================================================================================
+Prerequisites: What you need to work on these examples?
+================================================================================
+
+The examples assume that you are using ( links at bottom of page ):
+    * Fedora toolchain [1] 
+     * yum install armv5tel-redhat-linux-gnueabi-gcc \
+           armv5tel-redhat-linux-gnueabi-gdb \
+           armv5tel-redhat-linux-gnueabi-gcc-c++
+    * mkimage ( yum install uboot-tools )
+    * qemu-system-arm ( yum install qemu-system-arm )
+    
+
+================================================================================
+References:
+================================================================================
+The examples assume that you are using Fedora toolchain which can be installed 
+from following location:
+ [1] http://fedoraproject.org/wiki/Architectures/ARM/CrossToolchain
+

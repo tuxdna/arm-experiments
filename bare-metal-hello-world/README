@@ -1,0 +1,50 @@
+QEMU loads kernel binary at address 0x00010000
+
+The emulator starts the execution at address 0x00000000, 
+where few instructions (already in place) are used to jump
+ at the beginning of the kernel image.
+
+The interrupt table of ARM cores, (usually placed at address 0x00000000)
+ is not present, and the peripheral interrupts are disabled at startup,
+ as needed to boot a Linux kernel. 
+
+
+$ make
+$ qemu-system-arm -M versatilepb -m 128M -nographic -kernel test.bin
+
+To debug the program: add -s ( shorthand for -gdb tcp::1234 )
+$ qemu-system-arm -M versatilepb -m 128M -nographic -S -s -kernel test.bin
+
+$ gdb test.elf
+(gdb) target remote localhost:1234
+(gdb) break print_uart0
+(gdb) continue
+
+ -- breaks at print_uart0
+(gdb) s
+(gdb) s
+
+
+================================================================================
+Howto with U-Boot:
+================================================================================
+
+Download U-Boot
+ * u-boot-2010.03.tar.bz2 from http://www.denx.de/wiki/U-Boot/WebHome
+
+Compile U-Boot somewhere:
+$ export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+$ export ARCH=arm
+$ make versatilepb_config
+$ make all
+
+Now copy u-boot.bin to current folder ( see Makefile ):
+$ cat u-boot.bin test-uboot.uimg  > flash.bin
+$ printf "bootm 0x%X\n" $(expr $(stat -c%s u-boot.bin) + 65536)
+$ qemu-system-arm -M versatilepb -m 128M -nographic -kernel flash.bin
+
+UART0 implementation is in:
+http://git.savannah.gnu.org/cgit/qemu.git/tree/hw/pl011.c
+
+References:
+http://balau82.wordpress.com/2010/02/28/hello-world-for-bare-metal-arm-using-qemu/
