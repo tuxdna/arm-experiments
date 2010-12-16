@@ -1,0 +1,95 @@
+Toolchain installation:
+ - http://fedoraproject.org/wiki/Architectures/ARM/CrossToolchain
+
+yum install armv5tel-redhat-linux-gnueabi-­gcc armv5tel-redhat-linux-gnueabi-gdb armv5tel-redhat-linux-gnueabi-c­c++
+
+
+U-Boot compilation:
+
+wget -c ftp://ftp.denx.de/pub/u-boot/u-boot-2010.03.tar.bz2
+wget --no-check-certificate https://github.com/tuxdna/arm-experiments/raw/master/u-boot-2010.03-versatilepb.patch
+tar jxf u-boot-2010.03.tar.bz2
+cd u-boot-2010.03
+patch -p0 < ../u-boot-2010.03-versatilepb.patch
+export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+export ARCH=arm
+make versatilepb_config
+
+
+Kernel compilation:
+wget -c http://www.af.kernel.org/pub/linux/kernel/v2.6/testing/v2.6.24/linux-2.6.24-rc7.tar.gz 
+tar zxf linux-2.6.24-rc7.tar.gz 
+cd linux-2.6.24-rc7
+export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+export ARCH=arm
+make versatile_defconfig
+make xconfig
+make
+--OR--
+wget http://ftp.linux.org.uk/pub/linux/arm/fedora/platforms/qemu/config-versatile-2.6.24-rc7
+cp config-versatile-2.6.24-rc7 .config
+make
+mkdir -p `pwd`/modules_install_dir/
+mkdir -p `pwd`/headers_install_dir/
+make modules_install INSTALL_MOD_PATH=`pwd`/modules_install_dir/
+make headers_install INSTALL_HDR_PATH=`pwd`/headers_install_dir/
+
+
+Pepare a root filesystem:
+export ROOTFS_PATH=/data/dev/linux/rootfs-f12
+
+Busybox:
+wget http://www.busybox.net/downloads/busybox-1.16.0.tar.bz2
+tar jxf busybox-1.16.0.tar.bz2
+cd busybox-1.16.0
+export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+export ARCH=arm
+make
+make CONFIG_PREFIX=$ROOTFS_PATH install
+
+cd $ROOTFS_PATH; mkdir -p proc sys dev etc etc/init.d; cd -
+cp rcS  $ROOTFS_PATH/etc/init.d/rcS
+
+Kernel modules and headers:
+cp -r modules_install_dir/lib/modules/2.6.24-rc7/ $ROOTFS_PATH/lib/modules/
+(headers optional)
+cp -r headers_install_dir/include/* $ROOTFS_PATH/usr/include/
+
+cd $ROOTFS_PATH
+find . -type f | cpio -o --format=newc > ../rootfs.cpio
+gzip ../rootfs.cpio
+
+
+Install QEMU and other tools:
+yum install qemu­-system-­arm
+yum install uboot-tools
+yum install bridge-utils
+
+Test the kernel:
+qemu-system-arm -M versatilepb -m 128M -serial stdio -kernel linux-2.6.34/arch/arm/boot/zImage -initrd sandbox/rootfs -append "root=/dev/ram"
+
+UBoot+Kernel+Rootfs
+mkimage -A arm -C none -O linux -T kernel -d /data/dev/arm-experiments/linux-2.6.34/arch/arm/boot/zImage -a 0x00010000 -e 0x00010000 zImage.uimg
+mkimage -A arm -C none -O linux -T ramdisk -d rootfs.cpio.gz -a 0x00800000 -e 0x00800000 rootfs.cpio.gz.uimg
+
+dd if=/dev/zero of=flash.bin bs=1 count=6M
+dd if=u-boot.bin of=flash.bin conv=notrunc bs=1
+dd if=zImage.uimg of=flash.bin conv=notrunc bs=1 seek=2M
+dd if=rootfs.cpio.gz.uimg of=flash.bin conv=notrunc bs=1 seek=4M
+
+qemu-system-arm -M versatilepb -m 128M -kernel flash.bin -serial stdio
+
+Koji for ARM:
+yum install koji
+
+
+Fedora ARM filesystem:
+wget -c -O rpmlist-f12-armv5tel.txt http://fpaste.org/Lo3B/raw/
+for f in `rpmlist-f12-armv5tel.txt` ; do arm-koji download-build --arch=armv5tel --latestfrom=dist-f13 ${f%.*} ; done >> down.log  2>&1
+
+
+References:
+
+http://www.linuxquestions.org/questions/red-hat-31/no-file-system-could-mount-root-tried-ext2-iso9660-684841/
+http://balau82.wordpress.com/2010/04/12/booting-linux-with-u-boot-on-qemu-arm/
+
