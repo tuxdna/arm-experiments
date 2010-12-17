@@ -1,0 +1,704 @@
+% Created 2010-12-17 Fri 01:06
+\documentclass[11pt]{beamer}
+
+      \mode<presentation>
+
+      \usetheme{Copenhagen}
+
+      \usecolortheme{lily}
+
+      \beamertemplateballitem
+
+      \setbeameroption{show notes}
+      \usepackage[utf8]{inputenc}
+
+      \usepackage[T1]{fontenc}
+
+      \usepackage{hyperref}
+
+      \usepackage{color}
+      \usepackage{listings}
+      \lstset{numbers=none,language=[ISO]C++,tabsize=4,
+  frame=single,
+  basicstyle=\small,
+  showspaces=false,showstringspaces=false,
+  showtabs=false,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{red},
+  }
+
+      \usepackage{verbatim}
+
+      \institute{Fedora}
+          
+       \subject{RMRF}
+
+
+
+\title{foss.in/2010 - Fedora Embedded and QEMU/ARM hands on}
+\author{Saleem Ansari}
+\date{17th December 2010}
+
+\begin{document}
+
+\maketitle
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+\vspace*{1cm}
+
+
+\section{Agenda}
+\label{sec-1}
+
+
+\begin{frame}[fragile]\frametitle{Agenda}
+\label{sec-1.1}
+
+\begin{itemize}
+
+\item Fedora Embedded SIG – Special Interest Group\\
+\label{sec-1.1.1}
+
+
+\item Some background knowlege\\
+\label{sec-1.1.2}
+
+
+\item A basic hands-on with QEMU/ARM\\
+\label{sec-1.1.3}
+
+
+\item Fedora ARM Infrastructure\\
+\label{sec-1.1.4}
+
+
+\end{itemize} % ends low level
+\end{frame}
+\section{Fedora Embedded SIG – Special Interest Group}
+\label{sec-2}
+
+
+\begin{frame}[fragile]\frametitle{Fedora Embedded SIG – Special Interest Group}
+\label{sec-2.1}
+
+\begin{itemize}
+
+\item Goals - \href{http://fedoraproject.org/wiki/SIGs/Embedded}{http://fedoraproject.org/wiki/SIGs/Embedded}\\
+\label{sec-2.1.1}
+
+\begin{itemize}
+
+\item Create high quality packages of cross-compilers and related tools\\
+\label{sec-2.1.1.1}
+
+
+\item Provide packaging guidelines\\
+\label{sec-2.1.1.2}
+
+
+\item Make distribution releases on sub architectures\\
+\label{sec-2.1.1.3}
+
+\end{itemize} % ends low level
+
+\item Targeted platforms/arches: ARM, AVR32, AVR, Blackfin, TIGCC, RTEMS, others\\
+\label{sec-2.1.2}
+
+
+\item For this talk we will focus on ARM architecture\\
+\label{sec-2.1.3}
+
+
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Why Fedora on ARM architecture? Multiple reasons!}
+\label{sec-2.2}
+
+\begin{itemize}
+
+\item 2007: \~{} 98\% of one billion mobile phones sold each year use at least one ARM processor.\\
+\label{sec-2.2.1}
+
+
+\item 2009: \~{} 90\% of all embedded 32-bit RISC processors are ARM processors.\\
+\label{sec-2.2.2}
+
+
+\item 2010: \~{} 5 Billion ARM9 processors have been shipped so far\\
+\label{sec-2.2.3}
+
+
+\item ARM processors to enter server markets - Marvell's announcement\\
+\label{sec-2.2.4}
+
+
+\item ARM processor- Eagle\\
+\label{sec-2.2.5}
+
+\begin{itemize}
+
+\item based on Cortex A15 architecture, it has hardware virtualization support!\\
+\label{sec-2.2.5.1}
+
+\end{itemize} % ends low level
+
+\item OLPC is a one big project which interested to use Fedora ARM port\\
+\label{sec-2.2.6}
+
+
+\end{itemize} % ends low level
+\end{frame}
+\section{Some background}
+\label{sec-3}
+
+
+\begin{frame}[fragile]\frametitle{Some background}
+\label{sec-3.1}
+
+\begin{itemize}
+
+\item Platform / processor selection for a Linux/embedded project\\
+\label{sec-3.1.1}
+
+\begin{itemize}
+
+\item at-least 32bit processor\\
+\label{sec-3.1.1.1}
+
+
+\item processor should have a MMU\\
+\label{sec-3.1.1.2}
+
+
+\item non-MMU based processors can use ucLinux\\
+\label{sec-3.1.1.3}
+
+\begin{itemize}
+
+\item however you have to modify applications too\\
+\label{sec-3.1.1.3.1}
+
+\end{itemize} % ends low level
+
+\item floating point unit\\
+\label{sec-3.1.1.4}
+
+\begin{itemize}
+
+\item which optional and can be emulated by libraries\\
+\label{sec-3.1.1.4.1}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Why do we need a boot loader?}
+\label{sec-3.2}
+
+\begin{itemize}
+
+\item There is a lot of work done by boot loader.\\
+\label{sec-3.2.1}
+
+
+\item Kernel assumes that a lot of system initialization is already done:\\
+\label{sec-3.2.2}
+
+\begin{itemize}
+
+\item configuring memory sub-system.\\
+\label{sec-3.2.2.1}
+
+
+\item loading kernel image at the correct memory address\\
+\label{sec-3.2.2.2}
+
+
+\item loading initial RAM disk ( optional )\\
+\label{sec-3.2.2.3}
+
+
+\item initializing boot parameters\\
+\label{sec-3.2.2.4}
+
+
+\item obtaining the ARM Linux machine type\\
+\label{sec-3.2.2.5}
+
+
+\item initializing register variables for entry into kernel\\
+\label{sec-3.2.2.6}
+
+\end{itemize} % ends low level
+
+\item Writing code for all this is:\\
+\label{sec-3.2.3}
+
+\begin{itemize}
+
+\item highly error prone, repetitive, cumbersome and boring\\
+\label{sec-3.2.3.1}
+
+
+\item a readymade bootloader generally just fits in\\
+\label{sec-3.2.3.2}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Why do we need Linux Kernel?}
+\label{sec-3.3}
+
+\begin{itemize}
+
+\item Linux, of-course, is Open Source\\
+\label{sec-3.3.1}
+
+
+\item Vendor Independence\\
+\label{sec-3.3.2}
+
+
+\item POSIX compliance\\
+\label{sec-3.3.3}
+
+
+\item Varied Hardware Support\\
+\label{sec-3.3.4}
+
+
+\item linux kernel has many device drivers already built by someone\\
+\label{sec-3.3.5}
+
+\begin{itemize}
+
+\item provide us with well defined device interfaces\\
+\label{sec-3.3.5.1}
+
+
+\item does the grunt work of hardware level interfacing with the devices\\
+\label{sec-3.3.5.2}
+
+
+\item driver works on another hardware with usually very few changes\\
+\label{sec-3.3.5.3}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\section{A basic hands-on with QEMU/ARM}
+\label{sec-4}
+
+
+\begin{frame}[fragile]\frametitle{About QEMU}
+\label{sec-4.1}
+
+\begin{itemize}
+
+\item QEMU is an emulator for popular CPU\\
+\label{sec-4.1.1}
+
+\begin{itemize}
+
+\item x86, ARM, PowerPC, Sparc32/64, MIPS and ColdFire\\
+\label{sec-4.1.1.1}
+
+
+\item AVR32 support is in progress at \href{http://repo.or.cz/w/qemu/avr32.git}{http://repo.or.cz/w/qemu/avr32.git}\\
+\label{sec-4.1.1.2}
+
+
+\item It also simulates peripheral devices, basically a complete System on Chip.\\
+\label{sec-4.1.1.3}
+
+\end{itemize} % ends low level
+
+\item What makes QEMU special for doing embedded systems development?\\
+\label{sec-4.1.2}
+
+\begin{itemize}
+
+\item No need of actual hardware for prototyping.\\
+\label{sec-4.1.2.1}
+
+
+\item Its greener- no need of any power source.\\
+\label{sec-4.1.2.2}
+
+
+\item Many projects already use QEMU\\
+\label{sec-4.1.2.3}
+
+\begin{itemize}
+\item Android, MeeGo, etc.
+\end{itemize}
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Hands-on. We will discuss the following:}
+\label{sec-4.2}
+
+\begin{itemize}
+
+\item Development setup up\\
+\label{sec-4.2.1}
+
+\begin{itemize}
+
+\item ARM toolchain, QEMU etc.\\
+\label{sec-4.2.1.1}
+
+\end{itemize} % ends low level
+
+\item What happens at system reset?\\
+\label{sec-4.2.2}
+
+\begin{itemize}
+
+\item Initialization.\\
+\label{sec-4.2.2.1}
+
+
+\item Bootloader.\\
+\label{sec-4.2.2.2}
+
+
+\item Kernel.\\
+\label{sec-4.2.2.3}
+
+
+\item Initial root filesystem.\\
+\label{sec-4.2.2.4}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{System setup}
+\label{sec-4.3}
+
+\begin{itemize}
+
+\item Fedora ARM Toolchain\\
+\label{sec-4.3.1}
+
+\begin{itemize}
+\item ARMv5 only - \href{http://fedoraproject.org/wiki/Architectures/ARM/CrossToolchain}{http://fedoraproject.org/wiki/Architectures/ARM/CrossToolchain}
+\end{itemize}
+
+\item QEMU/ARM\\
+\label{sec-4.3.2}
+
+
+\item mkimage - tool to create boot images\\
+\label{sec-4.3.3}
+
+
+\item other tools\\
+\label{sec-4.3.4}
+
+\begin{itemize}
+\item bridge-utils ( optional )
+\item koji
+\end{itemize}
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{What happens when an ARM based board is powered ON?}
+\label{sec-4.4}
+
+\begin{itemize}
+
+\item Understand the memory map for RAM and ROM\\
+\label{sec-4.4.1}
+
+
+\item Startup code\\
+\label{sec-4.4.2}
+
+\begin{itemize}
+
+\item First instruction\\
+\label{sec-4.4.2.1}
+
+
+\item Vector table\\
+\label{sec-4.4.2.2}
+
+
+\item Stack initialization\\
+\label{sec-4.4.2.3}
+
+
+\item Relocating the RAM to a different address\\
+\label{sec-4.4.2.4}
+
+
+\item Running from RAM\\
+\label{sec-4.4.2.5}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Hands on:}
+\label{sec-4.5}
+
+\begin{itemize}
+
+\item Target hardware - VersatilePB - emulated QEMU\\
+\label{sec-4.5.1}
+
+
+\item Lets make a minimalistic linux based system on ARM\\
+\label{sec-4.5.2}
+
+
+\item Following steps are involved:\\
+\label{sec-4.5.3}
+
+\begin{itemize}
+\item Compile and configure U-Boot boot-loader
+\item Compile and configure Linux Kernel
+\item Create a root file-system
+
+\begin{itemize}
+\item We will use Busybox for shell command interface
+\end{itemize}
+
+\item Shove all of them into a one big chunk to be flashed onto memory
+\end{itemize}
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{What we learn from this excercise?}
+\label{sec-4.6}
+
+\begin{itemize}
+
+\item Its a great learning experience\\
+\label{sec-4.6.1}
+
+
+\item However its not productive in the long term.\\
+\label{sec-4.6.2}
+
+
+\item It doesn't scale to thousands of software packages.\\
+\label{sec-4.6.3}
+
+
+\item Fedora ARM port solves this probelm:\\
+\label{sec-4.6.4}
+
+\begin{itemize}
+
+\item Proven packaging technology already in use in many of the most popular distros\\
+\label{sec-4.6.4.1}
+
+
+\item Reduce development time and time to market for your next device\\
+\label{sec-4.6.4.2}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\section{Fedora ARM Infrastructure}
+\label{sec-5}
+
+
+\begin{frame}[fragile]\frametitle{Fedora ARM Infrastructure}
+\label{sec-5.1}
+
+\begin{itemize}
+
+\item Seneca Centre for Development of Open Technology (CDOT) at the School of Computer Studies at Seneca College, Toronto.\\
+\label{sec-5.1.1}
+
+
+\item \href{http://zenit.senecac.on.ca/wiki/index.php/Fedora_ARM_Secondary_Architecture}{http://zenit.senecac.on.ca/wiki/index.php/Fedora\_ARM\_Secondary\_Architecture}\\
+\label{sec-5.1.2}
+
+
+\item \href{http://zenit.senecac.on.ca/wiki/index.php/Fedora_ARM_Koji_Buildsystem}{http://zenit.senecac.on.ca/wiki/index.php/Fedora\_ARM\_Koji\_Buildsystem}\\
+\label{sec-5.1.3}
+
+
+\item Latest news:\\
+\label{sec-5.1.4}
+
+\begin{itemize}
+
+\item \href{http://fedora-arm.blogspot.com/}{http://fedora-arm.blogspot.com/}\\
+\label{sec-5.1.4.1}
+
+
+\item \href{http://paulfedora.wordpress.com/}{http://paulfedora.wordpress.com/}\\
+\label{sec-5.1.4.2}
+
+\end{itemize} % ends low level
+
+\item Current status page\\
+\label{sec-5.1.5}
+
+\begin{itemize}
+
+\item \href{http://arm.koji.fedoraproject.org/status/}{http://arm.koji.fedoraproject.org/status/}\\
+\label{sec-5.1.5.1}
+
+\end{itemize} % ends low level
+
+\item Recent video by Paul Whalen\\
+\label{sec-5.1.6}
+
+\begin{itemize}
+
+\item \href{http://fsoss.senecac.on.ca/2010/node/24}{http://fsoss.senecac.on.ca/2010/node/24}\\
+\label{sec-5.1.6.1}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Bulding packages for Fedora ARM}
+\label{sec-5.2}
+
+\begin{itemize}
+
+\item Create or fix an existing SRPM package\\
+\label{sec-5.2.1}
+
+
+\item Schedule a build on ARM Koji to create RPM\\
+\label{sec-5.2.2}
+
+
+\item Check and fix if necessary\\
+\label{sec-5.2.3}
+
+
+\item ARM Koji web interface\\
+\label{sec-5.2.4}
+
+
+\item More on Howto use koji\\
+\label{sec-5.2.5}
+
+\begin{itemize}
+
+\item \href{http://fedoraproject.org/wiki/Koji}{http://fedoraproject.org/wiki/Koji}\\
+\label{sec-5.2.5.1}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Contributing to Fedora/ARM}
+\label{sec-5.3}
+
+\begin{itemize}
+
+\item fedoraproject.org/wiki/Architectures/ARM/HowToQemu\\
+\label{sec-5.3.1}
+
+
+\item Mailing list\\
+\label{sec-5.3.2}
+
+\begin{itemize}
+
+\item \href{https://admin.fedoraproject.org/mailman/listinfo/arm}{https://admin.fedoraproject.org/mailman/listinfo/arm}\\
+\label{sec-5.3.2.1}
+
+\end{itemize} % ends low level
+
+\item IRC - \#fedora-arm on irc.freenode.net\\
+\label{sec-5.3.3}
+
+
+\item Issues not yet resolved:\\
+\label{sec-5.3.4}
+
+\begin{itemize}
+
+\item \href{https://bugzilla.redhat.com/show_bug.cgi?id=ARMTracker}{https://bugzilla.redhat.com/show\_bug.cgi?id=ARMTracker}\\
+\label{sec-5.3.4.1}
+
+\end{itemize} % ends low level
+
+\item More info at:\\
+\label{sec-5.3.5}
+
+\begin{itemize}
+
+\item \href{http://fedoraproject.org/wiki/Architectures/ARM/Team_and_Developers}{http://fedoraproject.org/wiki/Architectures/ARM/Team\_and\_Developers}\\
+\label{sec-5.3.5.1}
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\begin{frame}[fragile]\frametitle{Current state of affairs in Fedora/ARM}
+\label{sec-5.4}
+
+\begin{itemize}
+
+\item Fedora 13 release for ARM will hopefully be near Xmas.\\
+\label{sec-5.4.1}
+
+
+\item The default toolchain is still for ARMv5 and doesn't support hardfp so may of the modern ARM CPUs aren't optimally used\\
+\label{sec-5.4.2}
+
+
+\item Floating point support in the Fedora/ARM cross toolchain:\\
+\label{sec-5.4.3}
+
+\begin{itemize}
+
+\item Discussion is on for which of soft/softfp or hardfp to select for upcoming ARMv7 toolchain\\
+\label{sec-5.4.3.1}
+
+\end{itemize} % ends low level
+
+\item OLPC (currently the only one eager to use Fedora ARM for a large scale project)\\
+\label{sec-5.4.4}
+
+\begin{itemize}
+
+\item they seem to be aiming to jump from F-11 to F-14, for their next release\\
+\label{sec-5.4.4.1}
+
+
+\item its not clear if that includes XO-1.75 ( the OLPC's ARM target ).\\
+\label{sec-5.4.4.2}
+
+
+
+\end{itemize} % ends low level
+\end{itemize} % ends low level
+\end{frame}
+\section{Questions?}
+\label{sec-6}
+
+
+\begin{frame}[fragile]\frametitle{Questions?}
+\label{sec-6.1}
+
+
+\end{frame}
+\begin{frame}[fragile]\frametitle{Thank you!}
+\label{sec-6.2}
+
+\begin{itemize}
+
+\item tuxdna at \#fedora-arm on irc.freenode.net\\
+\label{sec-6.2.1}
+
+\end{itemize} % ends low level
+\end{frame}
+
+\end{document}
