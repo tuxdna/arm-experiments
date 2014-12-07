@@ -1,0 +1,20 @@
+ABSTRACT:
+=========================================================================
+
+We will have a Hands on with a hello world program, along with
+a brief discussion about the startup code.
+
+What happens when an ARM based board is powered ON?
+ * Understand the memory map for RAM and ROM
+ * First instruction
+ * Vector table
+ * Stack initialization
+ * Relocating the RAM to a different address
+ * Running from RAM
+
+A simple program on QEMU/ARM.
+
+If time permits we will also  discuss and have a hands on
+with a bootloader ( UBoot inside QEMU/ARM ).
+
+=========================================================================

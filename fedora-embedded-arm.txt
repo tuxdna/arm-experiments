@@ -1,0 +1,666 @@
+foss.in/2010 - Fedora Embedded
+
+foss.in/2010 - Fedora Embedded
+
+FINAL NOTES:
+
+OUTLINE:
+1. Fedora Embedded SIG
+2. Theory ( optional )
+3. A basic hands-on with QEMU/ARM
+4. Current state of affairs within Fedora/ARM
+5. Future plans and ideas
+
+================================================================================
+1. Fedora Embedded SIG
+================================================================================
+
+About Fedora Embedded – Special Interest Group
+ * Goals
+  * Create high quality packages of cross-compilers and related tools
+  * Provide packaging guidelines
+ * http://fedoraproject.org/wiki/SIGs/Embedded
+ * Targeted platforms/arches: ARM, AVR32, AVR, Blackfin, TIGCC, RTEMS, others
+ * For this talk we will focus on ARM architecture 
+
+Slide Notes:
+Platform / processor selection for a Linux/embedded project
+ * at-least 32bit wordsize
+ * should have a MMU
+ * non-MMU based processors can use ucLinux ( a no-MMU port of Linux )
+ * floating point unit is optional( which can be emulated by libraries )
+
+Why Fedora on ARM architecture? Multiple reasons!
+ * 2007: ~ 98% of one billion mobile phones sold each year use at least one ARM processor.
+ * 2009: ~ 90% of all embedded 32-bit RISC processors are ARM processors.
+ * 2010: ~ 5 Billion ARM9 processors have been shipped so far 
+ * ARM processors to enter server markets - Marvell's announcement
+ * ARM processor - Eagle 
+  * based on A15 architecture
+  * has hardware virtualization support!
+
+Why Fedora ARM / RPM packaging?
+ * proven technology already in use on may of the most popular distros
+ * reduce development time and time to market for your next device
+  * OLPC is one such example
+
+================================================================================
+2. Theory ( optional )
+================================================================================
+
+Why do we need a boot loader?
+ * there is a lot of work done by boot loader
+ * kernel assumes that a lot of system initialization is already done:
+  * Configure memory sub-system.
+  * load kernel image at the correct memory address
+  * Load initial RAM disk ( optional )
+  * initialize boot parameters
+  * obtain the ARM Linux machine type
+  * initialize register variables for entry into kernel
+ * writing code for all this is
+  * highly error prone, repetitive, cumbersome and boring
+  * a readymade bootloader generally just fits in 
+
+Why do we need Linux Kernel?
+ * Linux, of-course, is Open Source
+ * vendor independence
+ * POSIX compliance
+ * varied hardware support
+ * linux kernel has many device drivers already built by someone
+  * provide us with well defined device interfaces
+  * does the grunt work of hardware level interfacing with the devices
+  * driver works on another hardware with usually very few changes
+
+QEMU
+ * What is QEMU?
+  * QEMU is an emulator for popular CPU
+   * x86, ARM, PowerPC, Sparc32/64, MIPS and ColdFire
+   * AVR32 support is in progress at http://repo.or.cz/w/qemu/avr32.git 
+   * It also simulates peripheral devices
+ * What makes it special for doing embedded systems development?
+  * no need of actual hardware for prototyping ( most of the times )
+  * its greener – no need of any power source
+  * many projects already use QEMU
+   * Android's emulator uses QEMU
+
+================================================================================
+3. A basic hands-on with QEMU/ARM
+================================================================================
+
+We will discuss the following:
+ * What happens at system reset?
+ * Setting up an ARM toolchain.
+ * Initialization.
+ * Bootloader.
+ * Kernel.
+ * Initial root filesystem.
+
+System setup:
+ * Fedora ARM Toolchain - ARMv5 only
+  * http://fedoraproject.org/wiki/Architectures/ARM/CrossToolchain
+   $ yum install armv5tel­redhat­linux­gnueabi­gcc \
+           armv5tel­redhat­linux­gnueabi­gdb \
+           armv5tel­redhat­linux­gnueabi­gcc­c++
+ * QEM/ARM
+   $ yum install qemu­system­arm
+ * mkimage - tool to create boot images
+   $ yum install uboot-tools
+ * other tools
+   $ yum install bridge-utils
+   $ yum install koji
+
+What happens when an ARM based board is powered ON?
+ * Understand the memory map for RAM and ROM
+ * Startup code
+ * First instruction
+ * Vector table
+ * Stack initialization
+ * Relocating the RAM to a different address
+ * Running from RAM
+
+Hands on:
+ * Target hardware versatilepb using QEMU
+ * Lets configure a Boot-loader and a kernel
+ * Following steps are involved:
+  * Compile and configure U-Boot boot-loader
+  * Compile and configure Linux Kernel
+  * Create a root file-system
+  * Contributing back to Fedora/ARM
+
+Bootloader: U-Boot on QEMU/ARM
+ * Install mkimage
+  * sudo yum install -y uboot-tools
+ * Download the U-Boot source and then:
+  * cd /path/to/uboot-source
+ * export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+ * export ARCH=arm
+ * make versatilepb_config
+
+Now boot with the U-Boot boot-loader:
+ * qemu-system-arm -M versatilepb -m 128M -nographic -kernel u-boot.bin
+
+Linux Kernel on QEMU/ARM:
+ * Download kernel (linux-2.6.33.5)
+  * cd linux-2.6.33.5/
+  * export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+  * export ARCH=arm
+  * make versatile_defconfig
+  * make xconfig
+  * make
+
+Lets test the kernel:
+ * qemu-system-arm -M versatilepb -m 128M -kernel arch/arm/boot/zImage
+
+Lets build a Root file-system
+Build a very basic root file-system:
+ * $(CROSS_COMPILE)gcc -static test.c -o test
+ * echo test | cpio -o --format=newc > rootfs
+
+Test the root file-system
+ * qemu-system-arm -M versatilepb -m 128M -kernel zImage -initrd rootfs -append "root=/dev/ram rdinit=/test"
+
+Fedora ARM Infrastructure
+ * Understand the koji build system
+
+ * Fedora ARM is currently heavily driven by the Seneca Centre for Development of Open Technology (CDOT) at the School of Computer Studies at Seneca College, Toronto.
+  * http://zenit.senecac.on.ca/wiki/index.php/Fedora_ARM_Secondary_Architecture
+ * Latest news:
+  * http://fedora-arm.blogspot.com/
+  * http://paulfedora.wordpress.com/
+ * Current status page
+  * http://arm.koji.fedoraproject.org/status/
+
+Building packages using koji infrastrure for ARM
+ * Setup koji client:
+  * http://fedoraproject.org/wiki/PackageMaintainers/UsingKoji
+  * yum install fedora-packager
+  * /usr/bin/fedora-packager-setup
+ Fire a build
+  * arm-koji build dist
+
+Running Fedora on QEMU/ARM
+
+Detailed instructions at
+http://fedoraproject.org/wiki/Architectures/ARM/HowToQemu 
+In progress...
+
+Contributing to Fedora/ARM
+ Fedora ARM Build System
+  * http://zenit.senecac.on.ca/wiki/index.php/Fedora_ARM_Koji_Buildsystem
+ Recent video by Paul Whalen
+  * http://fsoss.senecac.on.ca/2010/node/24
+
+Bulding packages for Fedora ARM
+ARM Koji
+arm-koji build --scratch dist-f13 some-package.src.rpm
+ARM Koji web interface
+More on Howto use koji:
+http://fedoraproject.org/wiki/Koji 
+
+How can you contribute?
+Issues not yet resolved:
+https://bugzilla.redhat.com/show_bug.cgi?id=ARMTracker
+More info at:
+http://fedoraproject.org/wiki/Architectures/ARM/Team_and_Developers
+
+
+Questions?
+
+Thank you!
+
+
+===============================================================================
+Technical notes:
+===============================================================================
+
+hw/arm_boot.c:
+ 
+#define KERNEL_ARGS_ADDR 0x100
+#define KERNEL_LOAD_ADDR 0x00010000
+#define INITRD_LOAD_ADDR 0x00800000
+
+Which all machines/boards are registered inside QEMU?
+search for references of C function: qemu_register_machine
+===============================================================================
+
+
+===============================================================================
+Building Rootfs:
+===============================================================================
+Install rfsbuild:
+ yum localinstall --nogpgcheck http://ftp.linux.org.uk/pub/linux/arm/fedora/rfsbuild/rfsbuild-0.9.0-beta.noarch.rpm
+Reference:
+ http://ftp.linux.org.uk/pub/linux/arm/fedora/qemu/00README.txt
+===============================================================================
+
+
+===============================================================================
+Current state of affairs in Fedora/ARM
+===============================================================================
+Floating point support in the Fedora/ARM cross toolchain is in progress:
+ * discussion is on for which of soft/softfp or hardfp to select for upcoming ARMv7 support
+ * OLPCs (currently the only eager to use Fedora ARM for an actual project) 
+   but they seem to be aiming to jump from F-11 to F-14
+ * for their next release, but I don't know if that includes the XO-1.75.
+
+TODO:
+ * irc for a workout session
+ * Make a graphical representation of the current status of Fedora/ARM 
+ * what is the final decision on ARMv7 softfp / hardfp ?
+===============================================================================
+
+
+What are the limitions with using QEMU as koji builders?
+ * QEMU runs at a fraction of the speed of an actual hardware ( compared with GuruPlug/SheevaPlug for example)
+ * unless there is hardware virtualization support the speed difference will be significant
+ * hardware virtualization will work if the host OS has similar hardware
+  * example qemu-system-x86 running on a Fedora-x86 host
+ * ARM didn't support hardware virtualization earlier however there is some good news:
+  * http://arstechnica.com/business/news/2010/09/arms-eagle-has-landed-meet-the-a15.ars
+   * ARM's Eagle -  the A15 architecture will support hardware virtualization
+   * this means that the QEMU guests can run almost as good as an actual hardware would
+
+
+
+
+
+
+$ yumdownloader --source directfb
+$ rpm -i directfb-1.4.3-1.fc14.src.rpm 
+$ cd ../SPECS/
+$ rpmbuild -ba directfb.spec 
+error: Failed build dependencies:
+       libsysfs-devel is needed by directfb-1.4.3-1.fc14.x86_64
+       libv4l-devel is needed by directfb-1.4.3-1.fc14.x86_64
+       libvncserver-devel is needed by directfb-1.4.3-1.fc14.x86_64
+       tslib-devel is needed by directfb-1.4.3-1.fc14.x86_64
+$ yumdownloader --source libsysfs-devel libvncserver-devel libv4l-devel libsysfs-devel
+$ rpm -i libv4l-0.8.1-1.fc14.src.rpm  libvncserver-0.9.7-4.fc14.src.rpm  sysfsutils-2.1.0-8.fc14.src.rpm  tslib-1.0-2.fc12.src.rpm lzo-2.03-3.fc12.src.rpm
+$ cd ../SPECS/
+$ rpmbuild -ba libv4l.spec libvncserver.spec tslib.spec sysfsutils.spec
+$ for r in libv4l-0.8.1-1.fc14.src.rpm  libvncserver-0.9.7-4.fc14.src.rpm  sysfsutils-2.1.0-8.fc14.src.rpm  tslib-1.0-2.fc12.src.rpm lzo-2.03-3.fc12.src.rpm; do arm-koji build  --scratch dist-f13 $r ; done
+
+brigde/tap
+
+
+yum install openvpn bridge-utils
+
+
+
+===============================================================================
+
+hw/versatilepb.c: static void versatile_init(ram_addr_t ram_size,
+                     const char *boot_device,
+                     const char *kernel_filename, const char *kernel_cmdline,
+                     const char *initrd_filename, const char *cpu_model,
+                     int board_id)
+calls this function:
+    env = cpu_init(cpu_model);
+
+which expands to a macro defined here:
+target-arm/cpu.h: #define cpu_init cpu_arm_init
+
+and this function gets called
+target-arm/helper.c: CPUARMState *cpu_arm_init(const char *cpu_model)
+
+
+LED Register 0x10000008
+ - http://infocenter.arm.com/help/topic/com.arm.doc.dui0224i/Cachbhig.html
+ -  only  [7:0] bits of [31:0] total
+ -  rest of the [31:8] bits of [31:0] total are reserved
+
+===============================================================================
+
+
+
+Fedora ARM Architecture
+ - http://fedoraproject.org/wiki/User:Ctyler/Architectures/ARM
+ - http://fedoraproject.org/wiki/Architectures/ARM/HowToQemu
+
+RfsBuild - tool to build root filesystem
+ - http://fedoraproject.org/wiki/Architectures/ARM/RfsBuild
+
+Koji - the Fedora build system
+ - http://fedoraproject.org/wiki/PackageMaintainers/UsingKoji
+
+
+Anthony Ligouri - QEMU maintainer - http://wiki.qemu.org/ChangeLog
+Rusty Russell - http://swtch.com/lguest/
+
+Paul Brook - QEMU ARM creator
+
+Linux on Omap3 - Beagleboard and the like:
+ - http://vm-kernel.org/blog/2008/12/15/linux-is-running-on-qemu-omap3/
+
+Embedded work in Qemu
+ - http://qemu-forum.ipi.fi/viewtopic.php?f=22&t=2923&sid=fad1398e7ac4b986fa15338e39ec3b29
+
+
+Getting started with Fedora Embedded and QEMU/ARM hands-on
+
+
+Abstract:
+
+This talk is focused from a beginner's perspective about Embedded/Linux development and utilizing the maximum from the environment provided by Fedora Embedded. A hands-on with QEMU/ARM for setting up a boot-loader, kernel image, root file system and thereafter on how to customize it further. Finally summarizing the talk with various tools which can be used for development, testing and deployment, and how to contribute back to Fedora Embedded.
+
+http://fedoraproject.org/wiki/SIGs/Embedded
+
+
+
+This talk is focused from a beginner's perspective about Embedded/Linux development and utilizing the maximum from the environment provided by Fedora Embedded. 
+
+Which processor to select?
+
+Processor Must be at-least 32bit
+Should have a MMU
+• Non-MMU based processors can use uclinux ( no-MMU port )
+Floating point unit is optional, which can be emulated by libraries
+
+
+Setting up toolchains and QEMU environment
+http://fedoraproject.org/wiki/Architectures/ARM/CrossToolchain
+
+$ sudo yum -y  install armv5tel-redhat-linux-gnueabi-gcc armv5tel-redhat-linux-gnueabi-gdb armv5tel-redhat-linux-gnueabi-gcc-c++
+$ sudo  yum -y install qemu-system-arm
+
+Its that simple.
+
+We will discuss the following:
+System power on
+Initialization
+Bootloader
+Kernel
+initrd / Filesystem System
+
+Running a simple program for bare-metal ARM on QEMU.
+
+Hands on with bare-hello-world
+
+What happens when an ARM based board is powered ON?
+www.state-machine.com/arm/Building_bare-metal_ARM_with_GNU.pdf
+http://www.eetimes.com/design/other/4026075/ContentItem_6C454F78_A747_4D0F_825A_84F16A7C6791
+
+
+Startup code
+• Understand the memory map for RAM and ROM
+• First instruction
+• Stack initialization
+• Vector table
+• Relocating the RAM to a different address
+• Running from RAM
+
+Why do we need boot loader?
+http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html#d0e261
+• Kernel assumes that a lot of system initialization is already done.
+• Boot loader does the following:
+∘ Configure memory system.
+∘ Load kernel image at the correct memory address
+∘ Load initial RAM disk ( optional )
+∘ Initialize boot parameters
+∘ Obtain the ARM Linux machine type
+∘ Initialize register variables for entry into kernel
+• So there is a lot of work to be done by boot loader
+• It is highly error prone to write custom boot code for every hardware type
+
+Why do we need a kernel?
+• Open Source, of-course
+• Vendor Independence
+• POSIX Compliance
+• Varied Hardware Support
+∘ Linux kernel has many device drivers already implemented which provide us with device interface.
+∘ Linux kernel does the grunt work of hardware level interfacing with the devices, so once you write code for one hardware board, it will work on another device with, usually very few changes
+
+
+
+A hands-on with QEMU/ARM for setting up a boot-loader, kernel image, root file system and thereafter on how to customize it further.
+
+Compiling a Boot-loader and a kernel
+• U-Boot
+• Linux Kernel
+• Creating a root filesystem
+
+Bootloader: U-Boot on QEMU/ARM
+
+$ sudo yum install -y uboot-tools
+
+Download the U-Boot source and then:
+$ cd /path/to/uboot-source
+$ export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+$ export ARCH=arm
+$ make versatilepb_config
+
+Now boot with the U-Boot boot-loader
+$ qemu-system-arm -M versatilepb -m 128M -nographic -kernel u-boot.bin
+
+
+versitale board specification - http://www.arm.com/products/tools/development-boards/versatile.php
+mkimage specification - http://www.coyotos.org/docs/build/mkimage.html
+
+
+Linux Kernel:
+Lets compile kernel and 
+
+Download kernel linux-2.6.33.5:
+
+$ cd linux-2.6.33.5/
+$ export CROSS_COMPILE=armv5tel-redhat-linux-gnueabi-
+$ export ARCH=arm
+$ make versatile_defconfig
+$ make xconfig
+
+Lets test the kernel:
+
+$ qemu-system-arm -M versatilepb -m 128M -kernel arch/arm/boot/zImage
+
+Lets create a bare minimum root filesystem and test it:
+
+$ qemu-system-arm -M versatilepb -m 128M -kernel arch/arm/boot/zImage -initrd rootfs -append "root=/dev/ram rdinit=/test"
+
+
+Using Fedora on QEMU/ARM
+
+http://fedoraproject.org/wiki/Architectures/ARM/HowToQemu
+
+
+Finally summarizing the talk with various tools which can be used for development, testing and deployment, and how to contribute back to Fedora Embedded.
+
+Fedora ARM Build System
+http://zenit.senecac.on.ca/wiki/index.php/Fedora_ARM_Koji_Buildsystem
+Recent video by Paul Whalen
+http://fsoss.senecac.on.ca/2010/node/24
+
+$ arm-koji build --scratch dist-f13 some-package.src.rpm
+
+A walk through into the koji web interface
+
+
+
+
+A hands-on with QEMU/ARM for setting up a boot-loader, kernel image, root file system and thereafter on how to customize it further. Finally summarizing the talk with various tools which can be used for development, testing and deployment, and how to contribute back to Fedora Embedded.
+
+
+From Electron to Electronics.
+Electronic Circuits.
+Embedded Systems.
+Development Tools.
+Linux and Obstacles.
+Development IDE.
+ROM Flashing tool.
+Emulator.
+Qemu.
+Device emulation.
+Porting linux.
+Bootloader.
+U-Boot.
+No-MMU.
+Memory mapped devices.
+Device drivers.
+Binary images.
+Objdump.
+Readelf.
+Objcopy.
+Linker scripts.
+Fedora ARM.
+Koji and ARM.
+RPM.
+
+
+
+How fascinating is the world of Embedded Systems and Embedded Linux?
+
+Why is ARM important?
+• Over 5 Billion ARM9 processors have been shipped so far - http://www.arm.com/products/processors/classic/arm9/
+
+What is QEMU and what makes it special for doing embedded systems development?
+
+More about Fedora Embedded SIG
+http://fedoraproject.org/wiki/SIGs/Embedded
+
+There are four main steps to creating a target Linux system:
+   •   Determine system components
+   •   Configure and build the kernel
+   •   Build root filesystem
+   •   Set up boot software and configuration
+
+
+Outline:
+Tool chains
+Bootloader
+Building Linux kernel
+Root file system
+• Linux device drivers
+• System init, GUI etc.
+
+Toolchains
+GNU Toolchain http://en.wikipedia.org/wiki/GNU_toolchain
+
+Cross toolchain
+Build your own:
+http://gcc.gnu.org/wiki/Building_Cross_Toolchains_with_gcc
+ARM - http://wiki.openarmlab.org/index.php?title=Building_your_own_toolchain
+
+An additional set of steps
+Often error prone
+Highly time consuming
+
+Use prebuilt tool chains:
+
+http://fedoraproject.org/wiki/Architectures/ARM/CrossToolchain
+
+
+
+Building a complete cross-toolchain
+Using what is provided by Fedora 
+sudo yum -y install uClibc-devel.x86_64 armv5tel-uclibc-linux-gnueabi-gcc-c++ armv5tel-uclibc-linux-gnueabi-gdb
+
+
+$ sudo yum ­y  install armv5tel­redhat­linux­gnueabi­gcc \
+           armv5tel­redhat­linux­gnueabi­gdb \
+           armv5tel­redhat­linux­gnueabi­gcc­c++
+$ sudo  yum ­y install qemu­system­arm
+Its that simple!
+
+
+
+uClinux
+• MMU-less architectures
+
+http://220.156.188.21/CDAC/ASCNT_2009/ASCNT%202009/Paper/Ubiquitous/abstract46.pdf
+
+
+Simulate hardware failure
+Implement recovery procedures in system
+
+
+How to layout the filesystem is given in detail at http://www.pathname.com/fhs/
+
+
+
+References:
+http://balau82.wordpress.com/2010/04/12/booting-linux-with-u-boot-on-qemu-arm/
+http://thomas.enix.org/Blog-20081002153859-Technologie
+http://free-electrons.com/docs/
+
+http://www.happy-monkey.net/architect/system-scripts/dev/MAKEDEV
+
+http://www.linuxjournal.com/magazine/linux-powered-amateur-rocket-goes-usb?page=0,2
+
+OpenOCD
+
+
+TODO:
+notifier_chain_register - chapter 5 - Building Embedded Linux Systems
+
+First program for ARM/QEMU 
+http://balau82.wordpress.com/2010/02/28/hello-world-for-bare-metal-arm-using-qemu/
+http://www.eetimes.com/design/signal-processing-dsp/4007119/Building-Bare-Metal-ARM-Systems-with-GNU-Part-1--Getting-Started
+
+
+Linker script ( .ld files )
+http://www.delorie.com/gnu/docs/binutils/ld_6.html
+
+Low level debugging of ARM/QEMU via GDB
+http://www.mail-archive.com/qemu-devel@nongnu.org/msg06362.html
+
+
+http://pygmy.utoh.org/riscy/bootloader.html
+http://www.pjrc.com/arm/lpc2k_pgm/
+
+
+LPC2148 which RTOS to choose?
+http://www.edaboard.com/thread72908.html
+
+
+Building Linux 2.6.14 on arm no mmu
+http://opensrc.sec.samsung.com/document/Getting_Familiar_with_uClinuxARM2_6.html
+http://www.linuxquestions.org/questions/linux-software-2/error-mixed-implicit-and-normal-rules-while-trying-to-build-busybox-826795/
+
+Also try this:
+http://code.google.com/p/blueboard-lpc214x/
+
+
+Buy:
+A set of Resistors and Diodes
+Philips Screw driver
+Magnifying Lens
+
+
+ARM-
+
+Advanced Microcontroller Bus Architecture
+Advanced High speed Bus
+Advanced Peripheral Bus
+
+
+AMBA Bus Architecutre
+ARM Core is connected to all devices by AHB ( a high speed bus )
+There is also a APB ( a lower speed bus for peripherals ). APB and APB are connected using bridge.
+
+To talk to all the peripherals we need to know about the memory mapped addresses.
+
+11
+
+Further reading:
+http://www.eetimes.com/design/embedded/4210470/Efficient-C-Code-for-ARM-Devices
+
+
+8085 Simulator
+http://gnusim8085.org/
+
+
+
+FriendlyARM hands-on
+
+http://narnia.cs.ttu.edu/drupal/node/131
+
+http://geekwentfreak.wordpress.com/2010/07/27/flashing-uboot-onto-nand-mini2440/
+http://labs.kernelconcepts.de/Publications/Micro2440/
+
+NOR vs NAND
+http://www2.electronicproducts.com/NAND_vs_NOR_flash_technology-article-FEBMSY1-feb2002-html.aspx
+
+
+http://59.163.223.71/emb/main/
+
+http://www.codeblog.ch/2010/02/linux-shell-in-a-browser/
+
